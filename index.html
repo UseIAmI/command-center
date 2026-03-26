@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sovereign Command Center | I Am I Authentications</title>
+
+<style>
+  /*
+   * SOVEREIGN COMMAND CENTER — NETLIFY HOSTED VERSION
+   * commandcenter.useiami.com
+   *
+   * SETUP INSTRUCTIONS:
+   * 1. Set GAS_ENDPOINT below to your GAS Web App deployment URL
+   * 2. Deploy this file to Netlify (drag-and-drop folder)
+   * 3. Set custom domain: commandcenter.useiami.com in Netlify settings
+   * 4. Add CNAME record in your DNS: commandcenter → [your-netlify-subdomain].netlify.app
+   */
+
+  :root {
+    --bg:        #080c14;
+    --surface:   #0d1421;
+    --surface2:  #111c2e;
+    --border:    #1e2d45;
+    --accent:    #00c8ff;
+    --accent2:   #7b2fff;
+    --danger:    #ff3b6b;
+    --success:   #00e5a0;
+    --warning:   #ffb800;
+    --text:      #e8eef7;
+    --muted:     #5a7190;
+    --font-head: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'Courier New', Courier, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-head);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* LOGIN */
+  #login-screen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; background: var(--bg);
+  }
+
+  .login-card {
+    width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    padding: 52px 44px;
+    position: relative;
+  }
+
+  .login-card::before {
+    content: ''; position: absolute;
+    top: -1px; left: 20px; right: 20px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .login-wordmark {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 32px;
+  }
+
+  .login-shield {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    flex-shrink: 0;
+  }
+
+  .login-brand {
+    font-size: 11px; font-family: var(--font-mono);
+    letter-spacing: 0.25em; color: var(--accent); text-transform: uppercase;
+  }
+
+  .login-title { font-size: 32px; font-weight: 800; margin-bottom: 4px; }
+
+  .login-sub {
+    font-size: 10px; font-family: var(--font-mono);
+    letter-spacing: 0.3em; color: var(--muted);
+    text-transform: uppercase; margin-bottom: 36px;
+  }
+
+  .input-wrap { position: relative; margin-bottom: 16px; }
+
+  .input-label {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.25em; color: var(--muted);
+    text-transform: uppercase; display: block; margin-bottom: 8px;
+  }
+
+  .login-input {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-mono);
+    font-size: 15px; padding: 14px 16px;
+    outline: none; transition: border-color 0.2s;
+    letter-spacing: 0.15em;
+  }
+
+  .login-input:focus { border-color: var(--accent); }
+
+  .btn-auth {
+    width: 100%; background: var(--accent);
+    color: var(--bg); font-family: var(--font-head);
+    font-weight: 800; font-size: 12px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 16px; border: none; cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  .btn-auth:hover { opacity: 0.9; }
+
+  .login-error {
+    margin-top: 12px; color: var(--danger);
+    font-family: var(--font-mono); font-size: 11px; display: none;
+  }
+
+  .login-footer {
+    margin-top: 24px; padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--muted); letter-spacing: 0.15em;
+    text-align: center;
+  }
+
+  /* MAIN APP */
+  #app { display: none; position: relative; z-index: 1; }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(13,20,33,0.95);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 50;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 16px; }
+
+  .header-shield {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+
+  .header-title { font-size: 16px; font-weight: 800; letter-spacing: 0.08em; }
+  .header-title span { color: var(--accent); }
+
+  .header-badge {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.25em; color: var(--accent);
+    background: rgba(0,200,255,0.08);
+    border: 1px solid rgba(0,200,255,0.2);
+    padding: 4px 10px; text-transform: uppercase;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  .live-indicator { display: flex; align-items: center; gap: 6px; }
+
+  .pulse-dot {
+    width: 7px; height: 7px; background: var(--success);
+    border-radius: 50%; animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,229,160,0.5); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 5px rgba(0,229,160,0); }
+  }
+
+  .live-text {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--success); letter-spacing: 0.1em;
+  }
+
+  .nav {
+    display: flex; padding: 0 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-tab {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 16px 20px; cursor: pointer;
+    color: var(--muted);
+    border: none; border-bottom: 2px solid transparent;
+    background: none; transition: color 0.2s, border-color 0.2s;
+  }
+
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .content { padding: 32px 40px; }
+
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 16px; margin-bottom: 32px;
+  }
+
+  .stat {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 22px 24px; position: relative; overflow: hidden;
+  }
+
+  .stat::after {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+  }
+
+  .stat.c-blue::after   { background: var(--accent); }
+  .stat.c-purple::after { background: var(--accent2); }
+  .stat.c-green::after  { background: var(--success); }
+  .stat.c-red::after    { background: var(--danger); }
+
+  .stat-lbl {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+
+  .stat-val { font-size: 36px; font-weight: 800; line-height: 1; }
+  .stat.c-blue .stat-val   { color: var(--accent); }
+  .stat.c-purple .stat-val { color: var(--accent2); }
+  .stat.c-green .stat-val  { color: var(--success); }
+  .stat.c-red .stat-val    { color: var(--danger); }
+
+  .action-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 24px; flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 10px 18px; border: 1px solid;
+    background: none; cursor: pointer; transition: all 0.2s;
+  }
+
+  .btn:hover { background: rgba(255,255,255,0.04); }
+  .btn-a { color: var(--accent);  border-color: var(--accent);  }
+  .btn-g { color: var(--success); border-color: var(--success); }
+  .btn-m { color: var(--muted);   border-color: var(--border);  }
+  .btn-w { color: var(--warning); border-color: var(--warning); }
+
+  .filter-select {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-mono);
+    font-size: 10px; padding: 10px 14px; cursor: pointer; outline: none;
+    margin-left: auto;
+  }
+
+  .sec-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+  }
+
+  .sec-title {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .sec-line { flex: 1; height: 1px; background: var(--border); }
+
+  /* FEED GRID */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 18px 20px; transition: border-color 0.2s, transform 0.2s;
+    animation: fi 0.35s ease both;
+  }
+
+  @keyframes fi {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card:hover { border-color: rgba(0,200,255,0.25); transform: translateY(-2px); }
+
+  .card-top {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; gap: 10px; margin-bottom: 10px;
+  }
+
+  .card-title { font-size: 13px; font-weight: 600; line-height: 1.45; flex: 1; }
+
+  .badge {
+    font-family: var(--font-mono); font-size: 8px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 3px 7px; flex-shrink: 0; white-space: nowrap;
+  }
+
+  .badge-wait  { background: rgba(90,113,144,0.15); color: var(--muted);   border: 1px solid var(--border); }
+  .badge-cust  { background: rgba(255,59,107,0.12); color: var(--danger);  border: 1px solid rgba(255,59,107,0.25); }
+  .badge-arch  { background: rgba(123,47,255,0.12); color: var(--accent2); border: 1px solid rgba(123,47,255,0.25); }
+  .badge-singl { background: rgba(255,184,0,0.12);  color: var(--warning); border: 1px solid rgba(255,184,0,0.25); }
+  .badge-appr  { background: rgba(0,229,160,0.12);  color: var(--success); border: 1px solid rgba(0,229,160,0.25); }
+
+  .card-date {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--muted); margin-bottom: 14px;
+  }
+
+  .card-btns { display: flex; gap: 8px; }
+
+  .btn-ap {
+    flex: 1; padding: 9px 0;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    border: 1px solid rgba(0,229,160,0.3);
+    background: rgba(0,229,160,0.08); color: var(--success);
+    cursor: pointer; transition: background 0.2s;
+  }
+
+  .btn-ap:hover { background: rgba(0,229,160,0.18); }
+  .btn-ap:disabled { opacity: 0.5; cursor: default; }
+
+  .btn-dc {
+    flex: 1; padding: 9px 0;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    border: 1px solid rgba(255,59,107,0.3);
+    background: rgba(255,59,107,0.08); color: var(--danger);
+    cursor: pointer; transition: background 0.2s;
+  }
+
+  .btn-dc:hover { background: rgba(255,59,107,0.18); }
+
+  .btn-ext {
+    padding: 9px 12px;
+    font-family: var(--font-mono); font-size: 10px;
+    border: 1px solid var(--border); background: none;
+    color: var(--muted); cursor: pointer; text-decoration: none;
+    display: flex; align-items: center;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .btn-ext:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* PRODUCTION CARD */
+  .pcard {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px; margin-bottom: 12px;
+    animation: fi 0.35s ease both;
+  }
+
+  .pcard-top {
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 16px; margin-bottom: 10px;
+  }
+
+  .pcard-title { font-size: 15px; font-weight: 700; flex: 1; }
+
+  .spill {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 8px;
+  }
+
+  .spill-complete { background: rgba(0,229,160,0.12); color: var(--success); }
+  .spill-error    { background: rgba(255,59,107,0.12); color: var(--danger); }
+  .spill-pending  { background: rgba(90,113,144,0.12); color: var(--muted); }
+  .spill-prod     { background: rgba(0,200,255,0.12);  color: var(--accent); }
+
+  .pcard-meta {
+    display: flex; gap: 12px; align-items: center; margin-bottom: 10px;
+  }
+
+  .pcard-arch {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+  }
+
+  .pcard-summary {
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--muted); line-height: 1.65;
+    border-left: 2px solid var(--border);
+    padding-left: 12px; margin-bottom: 12px;
+  }
+
+  .pcard-footer {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--muted); display: flex; gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .pcard-check { color: var(--success); }
+
+  /* EMPTY */
+  .empty {
+    text-align: center; padding: 80px 40px;
+    grid-column: 1 / -1;
+  }
+
+  .empty-icon { font-size: 40px; opacity: 0.2; margin-bottom: 14px; }
+  .empty-txt { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.1em; }
+
+  /* LOADING */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(8,12,20,0.88);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 200; gap: 16px;
+  }
+
+  .overlay.on { display: flex; }
+
+  .spin {
+    width: 38px; height: 38px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.75s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .spin-txt {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-left: 3px solid var(--success);
+    padding: 14px 20px; font-family: var(--font-mono); font-size: 12px;
+    color: var(--text); z-index: 300;
+    transform: translateY(60px); opacity: 0;
+    transition: transform 0.3s, opacity 0.3s; max-width: 320px;
+  }
+
+  .toast.on  { transform: translateY(0); opacity: 1; }
+  .toast.err { border-left-color: var(--danger); }
+
+  @media (max-width: 768px) {
+    .stats-bar { grid-template-columns: repeat(2,1fr); }
+    .grid { grid-template-columns: 1fr; }
+    .content, .header, .nav { padding-left: 20px; padding-right: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-wordmark">
+      <div class="login-shield"></div>
+      <div class="login-brand">I Am I Authentications</div>
+    </div>
+    <div class="login-title">Command Center</div>
+    <div class="login-sub">Sovereign Intelligence Engine · v1.0</div>
+    <div class="input-wrap">
+      <label class="input-label">Access Code</label>
+      <input type="password" class="login-input" id="pw" placeholder="••••••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-auth" onclick="auth()">AUTHENTICATE → ENTER</button>
+    <div class="login-error" id="lerr">⚠ Invalid access code. Try again.</div>
+    <div class="login-footer">SOVEREIGN ENGINE v1.0 · useiami.com · CONFIDENTIAL</div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="overlay" id="ov">
+  <div class="spin"></div>
+  <div class="spin-txt" id="ov-txt">Processing...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- APP -->
+<div id="app">
+
+  <header class="header">
+    <div class="header-left">
+      <div class="header-shield"></div>
+      <div class="header-title">COMMAND <span>CENTER</span></div>
+      <div class="header-badge">Sovereign Engine</div>
+    </div>
+    <div class="header-right">
+      <div class="live-indicator">
+        <div class="pulse-dot"></div>
+        <div class="live-text">LIVE</div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav">
+    <button class="nav-tab active" onclick="tab('wt',this)">🛰 Watchtower</button>
+    <button class="nav-tab" onclick="tab('pr',this)">⚡ Production</button>
+    <button class="nav-tab" onclick="tab('ct',this)">⚙ Controls</button>
+  </nav>
+
+  <div class="content">
+
+    <!-- WATCHTOWER -->
+    <div id="pane-wt">
+      <div class="stats-bar">
+        <div class="stat c-blue"><div class="stat-lbl">Waiting</div><div class="stat-val" id="s-w">—</div></div>
+        <div class="stat c-purple"><div class="stat-lbl">Approved</div><div class="stat-val" id="s-a">—</div></div>
+        <div class="stat c-green"><div class="stat-lbl">Complete</div><div class="stat-val" id="s-c">—</div></div>
+        <div class="stat c-red"><div class="stat-lbl">Failed</div><div class="stat-val" id="s-f">—</div></div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-a" onclick="doFetch()">↓ Fetch RSS</button>
+        <button class="btn btn-m" onclick="loadWT()">↺ Refresh</button>
+        <select class="filter-select" id="fsort" onchange="renderWT()">
+          <option value="all">All Items</option>
+          <option value="Waiting">Waiting</option>
+          <option value="Approved">Approved</option>
+          <option value="FAILED">Failed</option>
+        </select>
+      </div>
+
+      <div class="sec-header">
+        <div class="sec-title">Intelligence Feed</div>
+        <div class="sec-line"></div>
+        <div class="sec-title" id="wt-count">0 items</div>
+      </div>
+
+      <div class="grid" id="wt-grid">
+        <div class="empty"><div class="empty-icon">🛰</div><div class="empty-txt">Initialising intelligence feed...</div></div>
+      </div>
+    </div>
+
+    <!-- PRODUCTION -->
+    <div id="pane-pr" style="display:none">
+      <div class="action-row">
+        <button class="btn btn-g" onclick="doProd()">▶ Run Production</button>
+        <button class="btn btn-m" onclick="loadPR()">↺ Refresh</button>
+      </div>
+
+      <div class="sec-header">
+        <div class="sec-title">Generated Content</div>
+        <div class="sec-line"></div>
+        <div class="sec-title" id="pr-count">0 items</div>
+      </div>
+
+      <div id="pr-list">
+        <div class="empty">
+          <div class="empty-icon">⚡</div>
+          <div class="empty-txt">Approve items in Watchtower · then run production</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div id="pane-ct" style="display:none">
+      <div class="sec-header">
+        <div class="sec-title">Engine Controls</div><div class="sec-line"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:32px">
+        <div class="stat c-blue" style="padding:22px">
+          <div class="stat-lbl" style="margin-bottom:10px">RSS Fetch</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Pull up to 10 new items from all Source feeds. Keyword filter applied automatically.</p>
+          <button class="btn btn-a" style="width:100%" onclick="doFetch()">↓ Fetch Now</button>
+        </div>
+        <div class="stat c-purple" style="padding:22px">
+          <div class="stat-lbl" style="margin-bottom:10px">Production Run</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Dual-pass Gemini generation on all Approved items. Creates Vault Docs, pushes Apollo + Substack.</p>
+          <button class="btn btn-g" style="width:100%" onclick="doProd()">▶ Run Production</button>
+        </div>
+        <div class="stat c-red" style="padding:22px">
+          <div class="stat-lbl" style="margin-bottom:10px">90-Day Purge</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Remove content older than 90 days from CONTENT GEN sheet. Keeps the feed fresh and relevant.</p>
+          <button class="btn btn-w" style="width:100%" onclick="doPurge()">⌫ Run Purge</button>
+        </div>
+        <div class="stat" style="padding:22px;border-top:2px solid var(--success)">
+          <div class="stat-lbl" style="margin-bottom:14px;color:var(--success)">Pipeline Status</div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">Gemini 2.5 Flash</span>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--success)">● ACTIVE</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">Apollo API</span>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--warning)">● CONFIGURE KEY</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">Substack Bridge</span>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--warning)">● CONFIGURE EMAIL</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">Drive Vault</span>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--success)">● ACTIVE</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">Dual-Pass Engine</span>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--success)">● ACTIVE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-header">
+        <div class="sec-title">Setup Guide</div><div class="sec-line"></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);padding:24px">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:2.2">
+          <span style="color:var(--text);font-weight:700">Step 1:</span> GAS → Extensions → Apps Script → Project Settings → Script Properties<br>
+          &nbsp;&nbsp;Add: GEMINI_API_KEY · APOLLO_API_KEY · APOLLO_SEQUENCE_ID · ADMIN_EMAIL · COMMAND_CENTER_PW · SUBSTACK_EMAIL · VAULT_FOLDER_ID<br><br>
+          <span style="color:var(--text);font-weight:700">Step 2:</span> Deploy GAS as Web App → Execute as Me → Anyone can access<br>
+          &nbsp;&nbsp;Copy the Web App URL and set it as GAS_ENDPOINT in this file<br><br>
+          <span style="color:var(--text);font-weight:700">Step 3:</span> Deploy this file to Netlify → Set custom domain: commandcenter.useiami.com<br>
+          &nbsp;&nbsp;Add CNAME DNS record: commandcenter → [your-netlify-subdomain].netlify.app<br><br>
+          <span style="color:var(--text);font-weight:700">Step 4:</span> Run "⚙ Setup 8AM Auto-Trigger" from the GAS menu in your Google Sheet<br><br>
+          <span style="color:var(--accent)">You are now operational. Stop reacting. Start neutralizing.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ╔══════════════════════════════════════════════════════╗
+  // ║  SET THIS TO YOUR GAS WEB APP DEPLOYMENT URL        ║
+  // ║  Extensions > Apps Script > Deploy > Web App > URL  ║
+  // ╚══════════════════════════════════════════════════════╝
+  const GAS_ENDPOINT = 'YOUR_GAS_WEB_APP_URL_HERE';
+
+  let TOKEN = null;
+  let wtItems = [];
+  let prItems = [];
+
+  // ── AUTH ──
+  function auth() {
+    const pw = document.getElementById('pw').value.trim();
+    if (!pw) return;
+    const base = GAS_ENDPOINT.split('?')[0];
+    window.location.href = base + '?pw=' + encodeURIComponent(pw);
+  }
+
+  document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') auth(); });
+
+  // ── API ──
+  async function api(data) {
+    if (TOKEN) data.token = TOKEN;
+    try {
+      const r = await fetch(GAS_ENDPOINT, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        redirect: 'follow'
+      });
+      return await r.json();
+    } catch (e) {
+      toast('Connection error: ' + e.message, true);
+      return null;
+    }
+  }
+
+  // ── TABS ──
+  function tab(name, el) {
+    ['wt','pr','ct'].forEach(n => {
+      document.getElementById('pane-' + n).style.display = 'none';
+    });
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('pane-' + name).style.display = 'block';
+    el.classList.add('active');
+    if (name === 'pr') loadPR();
+  }
+
+  // ── WATCHTOWER ──
+  async function loadWT() {
+    loading('Loading intelligence feed...');
+    const r = await api({ action: 'getWatchtower' });
+    done();
+    if (r && r.data) { wtItems = r.data; renderWT(); stats(); }
+    else toast('Failed to load Watchtower', true);
+  }
+
+  function renderWT() {
+    const f = document.getElementById('fsort').value;
+    const items = f === 'all' ? wtItems : wtItems.filter(d => d.status === f);
+    document.getElementById('wt-count').textContent = items.length + ' items';
+
+    if (!items.length) {
+      document.getElementById('wt-grid').innerHTML =
+        `<div class="empty"><div class="empty-icon">🛰</div><div class="empty-txt">No items. Click "Fetch RSS" to pull new intelligence.</div></div>`;
+      return;
+    }
+
+    document.getElementById('wt-grid').innerHTML = items.map((d, i) => `
+      <div class="card" style="animation-delay:${i*35}ms">
+        <div class="card-top">
+          <div class="card-title">${esc(d.title)}</div>
+          <span class="badge ${badgeCls(d.status)}">${d.status}</span>
+        </div>
+        <div class="card-date">📅 ${d.date}</div>
+        <div class="card-btns">
+          <button class="btn-ap" id="ap-${d.row}" onclick="approve(${d.row})">✓ Approve</button>
+          <button class="btn-dc" onclick="decline(${d.row},this)">✕ Decline</button>
+          <a class="btn-ext" href="${esc(d.link)}" target="_blank" rel="noopener">↗</a>
+        </div>
+      </div>`).join('');
+  }
+
+  function badgeCls(s) {
+    if (s === 'Waiting') return 'badge-wait';
+    if (s === 'Approved') return 'badge-appr';
+    if (s === 'FAILED' || s === 'RETRY REQUIRED') return 'badge-singl';
+    return 'badge-wait';
+  }
+
+  function stats() {
+    document.getElementById('s-w').textContent = wtItems.filter(d=>d.status==='Waiting').length;
+    document.getElementById('s-a').textContent = wtItems.filter(d=>d.status==='Approved').length;
+    document.getElementById('s-c').textContent = prItems.filter(d=>d.status==='Complete').length;
+    document.getElementById('s-f').textContent = wtItems.filter(d=>d.status==='FAILED'||d.status==='RETRY REQUIRED').length;
+  }
+
+  async function approve(row) {
+    const btn = document.getElementById('ap-' + row);
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    const r = await api({ action: 'approveItem', row });
+    if (r && r.success) {
+      if (btn) { btn.textContent = '✓ Approved'; }
+      toast('Item approved. Run Production when ready.');
+      const idx = wtItems.findIndex(d => d.row === row);
+      if (idx >= 0) wtItems[idx].status = 'Approved';
+      stats();
+    }
+  }
+
+  async function decline(row, btn) {
+    btn.disabled = true;
+    const card = btn.closest('.card');
+    card.style.opacity = '0.35';
+    card.style.pointerEvents = 'none';
+    await api({ action: 'declineItem', row });
+    const idx = wtItems.findIndex(d => d.row === row);
+    if (idx >= 0) wtItems.splice(idx, 1);
+    stats();
+    toast('Item declined.');
+  }
+
+  // ── PRODUCTION ──
+  async function loadPR() {
+    loading('Loading production data...');
+    const r = await api({ action: 'getProduction' });
+    done();
+    if (r && r.data) { prItems = r.data; renderPR(); stats(); }
+  }
+
+  function renderPR() {
+    document.getElementById('pr-count').textContent = prItems.length + ' items';
+    if (!prItems.length) {
+      document.getElementById('pr-list').innerHTML =
+        `<div class="empty"><div class="empty-icon">⚡</div><div class="empty-txt">No content produced yet. Approve items → Run Production.</div></div>`;
+      return;
+    }
+
+    const arcColors = {
+      'Custodial Negligence': 'var(--danger)',
+      'Architectural Inevitability': 'var(--accent2)',
+      'Single Point of Failure': 'var(--warning)'
+    };
+
+    document.getElementById('pr-list').innerHTML = prItems.map((d, i) => {
+      const ac = arcColors[d.archetype] || 'var(--accent)';
+      const sc = d.status === 'Complete' ? 'spill-complete' :
+                 d.status.includes('ERROR') ? 'spill-error' :
+                 d.status.includes('Production') ? 'spill-prod' : 'spill-pending';
+      return `
+        <div class="pcard" style="border-left-color:${ac};animation-delay:${i*40}ms">
+          <div class="pcard-top">
+            <div class="pcard-title">${esc(d.title)}</div>
+            <span class="spill ${sc}">${d.status}</span>
+          </div>
+          <div class="pcard-meta">
+            ${d.archetype ? `<span class="pcard-arch" style="color:${ac}">${d.archetype}</span>` : ''}
+            ${d.score ? `<span style="font-family:var(--font-mono);font-size:9px;color:var(--muted)">Score ${d.score}/19</span>` : ''}
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--muted)">${d.date}</span>
+          </div>
+          ${d.summary && d.summary !== 'undefined' ? `<div class="pcard-summary">${esc(d.summary.substring(0,220))}${d.summary.length>220?'…':''}</div>` : ''}
+          <div class="pcard-footer">
+            <span class="pcard-check">✓ Vault Doc</span>
+            <span class="pcard-check">✓ Apollo Pushed</span>
+            <span class="pcard-check">✓ Substack Draft</span>
+            <span class="pcard-check">✓ Gmail Sent</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── ACTIONS ──
+  async function doFetch() {
+    loading('Fetching RSS intelligence...');
+    const r = await api({ action: 'triggerFetch' });
+    done();
+    if (r && r.success) { toast('RSS fetch complete.'); loadWT(); }
+    else toast('Fetch failed: ' + ((r && r.error) || 'Check GAS logs'), true);
+  }
+
+  async function doProd() {
+    const approved = wtItems.filter(d => d.status === 'Approved').length;
+    if (approved === 0) { toast('No approved items. Approve items in Watchtower first.', true); return; }
+    if (!confirm(`Run production on ${approved} approved item(s)? This may take several minutes.`)) return;
+    loading('Running dual-pass Gemini production... Please wait.');
+    const r = await api({ action: 'triggerProduction' });
+    done();
+    if (r && r.success) { toast('Production complete! Check Drive Vault + Gmail.'); loadWT(); loadPR(); }
+    else toast('Production error: ' + ((r && r.error) || 'Check GAS execution logs'), true);
+  }
+
+  async function doPurge() {
+    if (!confirm('Run 90-day purge? Permanently removes old content rows.')) return;
+    loading('Running 90-day purge...');
+    await api({ action: 'triggerFetch' });
+    done();
+    toast('Purge complete.');
+  }
+
+  // ── UTILS ──
+  function loading(t) {
+    document.getElementById('ov-txt').textContent = t || 'Processing...';
+    document.getElementById('ov').classList.add('on');
+  }
+
+  function done() { document.getElementById('ov').classList.remove('on'); }
+
+  function toast(msg, err) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast on' + (err ? ' err' : '');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('on'), 4500);
+  }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
